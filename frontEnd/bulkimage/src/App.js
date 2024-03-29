@@ -24,7 +24,7 @@ const ImageUpload = () => {
       }
 
       const response = await axios.post(
-        "https://calm-pink-sea-urchin-kilt.cyclic.app/upload",
+        "http://localhost:3000/upload",
         formData
       );
 
@@ -59,7 +59,7 @@ const ImageUpload = () => {
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {resizedImages.length > 0 && (
+      {/* {resizedImages.length > 0 && (
         <div>
           <h2>Resized Images:</h2>
           <ul>
@@ -68,7 +68,7 @@ const ImageUpload = () => {
             ))}
           </ul>
         </div>
-      )}
+      )} */}
     </div>
   );
 };
