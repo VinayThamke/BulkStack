@@ -33,15 +33,31 @@ const ImageUpload = () => {
         "https://calm-pink-sea-urchin-kilt.cyclic.app/upload",
         formData,
         {
-          responseType: "blob", // Ensure response is treated as a binary blob
+          responseType: "arraybuffer", // Ensure response is treated as a binary buffer
         }
       );
 
       // Create a new JSZip instance for the main ZIP file
       const zip = new JSZip();
 
-      // Add each resized image as a file to the main ZIP
-      zip.file("resized_images.zip", response.data, { binary: true });
+      // Convert binary response data to Uint8Array
+      const dataArray = new Uint8Array(response.data);
+
+      // Read each image file and add it to the ZIP
+      const promises = Array.from(selectedImages).map((image, index) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const outputFilename = image.name;
+            zip.file(outputFilename, event.target.result);
+            resolve();
+          };
+          reader.readAsArrayBuffer(image);
+        });
+      });
+
+      // Wait for all promises to resolve before generating the ZIP
+      await Promise.all(promises);
 
       // Generate the content of the main ZIP as a blob
       const blob = await zip.generateAsync({ type: "blob" });
@@ -54,7 +70,7 @@ const ImageUpload = () => {
       link.href = url;
 
       // Set the filename for the downloaded file
-      link.setAttribute("download", "resized_images_with_files.zip");
+      link.setAttribute("download", "resized_images.zip");
 
       // Append the link to the document body
       document.body.appendChild(link);
