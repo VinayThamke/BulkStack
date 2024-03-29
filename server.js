@@ -1,14 +1,20 @@
 const express = require("express");
 const multer = require("multer");
 const sharp = require("sharp");
-const JSZip = require("jszip");
+const path = require("path");
 const fs = require("fs");
+const { performance } = require("perf_hooks");
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
+
+const cors = require("cors");
+app.use(cors());
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+app.use(express.static(path.join(__dirname, "./frontEnd/bulkimage/build")));
 
 app.post("/upload", upload.array("images"), async (req, res) => {
   try {
@@ -20,7 +26,7 @@ app.post("/upload", upload.array("images"), async (req, res) => {
         .json({ error: "No images selected for uploading." });
     }
 
-    const { width, height } = req.body;
+    const { width, height } = req.body; // Extract width and height from the request body
 
     if (!width || !height) {
       return res
@@ -28,38 +34,53 @@ app.post("/upload", upload.array("images"), async (req, res) => {
         .json({ error: "Please provide both width and height parameters." });
     }
 
-    const zip = new JSZip();
-    const promises = [];
+    const outputDir = "output";
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir);
+    }
 
-    files.forEach((file) => {
-      const outputFilename = `${file.originalname}`;
-      const inputBuffer = file.buffer;
+    const resizedImages = [];
 
-      const resizedImagePromise = sharp(inputBuffer)
-        .resize({
-          width: parseInt(width),
-          height: parseInt(height),
-          fit: sharp.fit.cover,
-        })
-        .toBuffer()
-        .then((resizedBuffer) => {
-          zip.file(outputFilename, resizedBuffer);
-        });
+    console.log("Started...");
+    const start = performance.now();
 
-      promises.push(resizedImagePromise);
-    });
+    // Use Promise.all for parallel execution of image processing
+    await Promise.all(
+      files.map(async (file) => {
+        const inputBuffer = file.buffer;
+        const outputFilename = `${file.originalname}`;
+        const outputFile = path.join(__dirname, outputDir, outputFilename);
 
-    await Promise.all(promises);
+        await sharp(inputBuffer)
+          .resize({
+            width: parseInt(width), // Convert width to integer
+            height: parseInt(height), // Convert height to integer
+            // fit: "contain",
+            // background: "red",
+          })
+          .toFile(outputFile);
 
-    const zipData = await zip.generateAsync({ type: "nodebuffer" });
+        resizedImages.push(outputFilename);
+      })
+    );
 
-    res.set("Content-Type", "application/zip");
-    res.set("Content-Disposition", "attachment; filename=resized_images.zip");
-    res.send(zipData);
+    const end = performance.now();
+    console.log("Completed!");
+    console.log("Total Time", end - start);
+
+    res.json({ resizedImages });
   } catch (error) {
     console.error("Error processing images:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
+});
+
+// app.get("*", (req, res) => {
+//   res.sendFile(path.join(__dirname, "build", "index.html"));
+// });
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "/frontEnd/bulkimage/build/index.html"));
 });
 
 app.listen(port, () => {
