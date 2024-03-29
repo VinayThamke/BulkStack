@@ -1,0 +1,12 @@
+.mainContainer{
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+
+  .inputContainer{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
