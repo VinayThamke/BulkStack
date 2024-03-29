@@ -24,7 +24,7 @@ const ImageUpload = () => {
       }
 
       const response = await axios.post(
-        "http://localhost:5000/upload",
+        "http://localhost:3000/upload",
         formData
       );
 
