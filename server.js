@@ -4,9 +4,10 @@ const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs");
 const { performance } = require("perf_hooks");
+const archiver = require("archiver");
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 
 const cors = require("cors");
 app.use(cors());
@@ -38,49 +39,52 @@ app.post("/upload", upload.array("images"), async (req, res) => {
         .json({ error: "Please provide both width and height parameters." });
     }
 
-    const outputDir = "output";
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir);
-    }
-
     const resizedImages = [];
 
     console.log("Started...");
     const start = performance.now();
+
+    const archive = archiver("zip", {
+      zlib: { level: 9 }, // Sets the compression level.
+    });
+
+    archive.on("error", function (err) {
+      throw err;
+    });
+
+    // Pipe archive data to response
+    archive.pipe(res);
 
     // Use Promise.all for parallel execution of image processing
     await Promise.all(
       files.map(async (file) => {
         const inputBuffer = file.buffer;
         const outputFilename = `${file.originalname}`;
-        const outputFile = path.join(__dirname, outputDir, outputFilename);
 
-        await sharp(inputBuffer)
+        const resizedImageBuffer = await sharp(inputBuffer)
           .resize({
             width: parseInt(width), // Convert width to integer
             height: parseInt(height), // Convert height to integer
             // fit: "contain",
             // background: "red",
           })
-          .toFile(outputFile);
+          .toBuffer();
 
+        archive.append(resizedImageBuffer, { name: outputFilename });
         resizedImages.push(outputFilename);
       })
     );
 
+    // Finalize the archive
+    archive.finalize();
+
     const end = performance.now();
     console.log("Completed!");
     console.log("Total Time", end - start);
-
-    res.json({ resizedImages });
   } catch (error) {
     console.error("Error processing images:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-});
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
 app.listen(port, () => {
