@@ -80,7 +80,7 @@ app.post("/upload", upload.array("images"), async (req, res) => {
 // });
 
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "/frontEnd/bulkimage/build/index.html"));
+  res.sendFile(path.join(__dirname, "./frontEnd/bulkimage/build/index.html"));
 });
 
 app.listen(port, () => {
