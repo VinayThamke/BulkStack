@@ -14,10 +14,10 @@ app.use(cors());
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-app.use(express.static(path.join(__dirname, "../frontEnd/build")));
+app.use(express.static(path.join(__dirname, "../frontEnd/bulkimage/build")));
 
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontEnd/build/index.html"));
+  res.sendFile(path.join(__dirname, "../frontEnd/bulkimage/build/index.html"));
 });
 
 app.post("/upload", upload.array("images"), async (req, res) => {
