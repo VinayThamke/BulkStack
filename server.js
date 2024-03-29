@@ -1,10 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const sharp = require("sharp");
-const path = require("path");
-const fs = require("fs");
 const { performance } = require("perf_hooks");
-const archiver = require("archiver");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,12 +11,6 @@ app.use(cors());
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-
-// app.use(express.static(path.join(__dirname, "./frontEnd/bulkimage/build")));
-
-// app.get("*", (req, res) => {
-//   res.sendFile(path.join(__dirname, "./frontEnd/bulkimage/build/index.html"));
-// });
 
 app.post("/upload", upload.array("images"), async (req, res) => {
   try {
@@ -39,21 +30,8 @@ app.post("/upload", upload.array("images"), async (req, res) => {
         .json({ error: "Please provide both width and height parameters." });
     }
 
-    const resizedImages = [];
-
     console.log("Started...");
     const start = performance.now();
-
-    const archive = archiver("zip", {
-      zlib: { level: 9 }, // Sets the compression level.
-    });
-
-    archive.on("error", function (err) {
-      throw err;
-    });
-
-    // Pipe archive data to response
-    archive.pipe(res);
 
     // Use Promise.all for parallel execution of image processing
     await Promise.all(
@@ -65,18 +43,19 @@ app.post("/upload", upload.array("images"), async (req, res) => {
           .resize({
             width: parseInt(width), // Convert width to integer
             height: parseInt(height), // Convert height to integer
-            // fit: "contain",
-            // background: "red",
           })
           .toBuffer();
 
-        archive.append(resizedImageBuffer, { name: outputFilename });
-        resizedImages.push(outputFilename);
+        // Set content disposition header to force browser to download the file
+        res.set({
+          "Content-Disposition": `attachment; filename="${outputFilename}"`,
+          "Content-Type": "image/jpeg", // Change content type based on your image type
+        });
+
+        // Send resized image buffer as response
+        res.send(resizedImageBuffer);
       })
     );
-
-    // Finalize the archive
-    archive.finalize();
 
     const end = performance.now();
     console.log("Completed!");
